@@ -25,10 +25,8 @@ A minimal, **clean**, and **fast** cron scheduler modeled after Go’s `time.Tim
 ## 📦 Install
 
 ```bash
-go get github.com/your-org/cron
+go get github.com/imunhatep/cronx
 ```
-
-> Replace `github.com/your-org/cron` with your actual module path.
 
 ***
 
@@ -37,7 +35,7 @@ go get github.com/your-org/cron
 ### Minute‑level (default, 5 fields)
 
 ```go
-c, err := cron.New("*/5 * * * *") // every 5 minutes at second 0
+c, err := cronx.New("*/5 * * * *") // every 5 minutes at second 0
 if err != nil { panic(err) }
 defer c.Stop()
 
@@ -50,7 +48,7 @@ for t := range c.C {
 
 ```go
 // Every minute at :00 and :30 (seconds field is last)
-c, err := cron.New("0,30 */1 * * * *", cron.WithSeconds())
+c, err := cronx.New("0,30 */1 * * * *", cronx.WithSeconds())
 if err != nil { panic(err) }
 defer c.Stop()
 
@@ -63,10 +61,10 @@ for t := range c.C {
 
 ```go
 loc, _ := time.LoadLocation("America/New_York")
-c, _ := cron.New(
+c, _ := cronx.New(
     "0 9-17/2 * * mon-fri", // 09:00, 11:00, 13:00, 15:00, 17:00 (minute resolution)
-    cron.WithLocation(loc),
-    cron.WithBuffered(1),   // buffer one tick
+    cronx.WithLocation(loc),
+    cronx.WithBuffered(1),   // buffer one tick
 )
 defer c.Stop()
 ```
@@ -192,8 +190,8 @@ A: Yes—use `ParseSpec` + `Schedule.NextFrom` (via `Cron.Next`) to enumerate fu
 ### Preview next 5 runs (minute resolution)
 
 ```go
-s, _ := cron.ParseSpec("0 9-17/2 * * mon-fri", false) // no seconds
-c, _ := cron.NewSchedule(s)
+s, _ := cronx.ParseSpec("0 9-17/2 * * mon-fri", false) // no seconds
+c, _ := cronx.NewSchedule(s)
 t := time.Now()
 for i := 0; i < 5; i++ {
     t = c.Next(t)
@@ -204,7 +202,7 @@ for i := 0; i < 5; i++ {
 ### Every 15 seconds between 10:00–10:10
 
 ```go
-c, _ := cron.New("*/15 0-10 10 * * *", cron.WithSeconds())
+c, _ := cronx.New("*/15 0-10 10 * * *", cronx.WithSeconds())
 defer c.Stop()
 for t := range c.C { fmt.Println(t) }
 ```
