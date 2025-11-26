@@ -44,10 +44,10 @@ for t := range c.C {
 }
 ```
 
-### Per‑second (opt‑in, seconds **last**)
+### Per‑second (opt‑in, seconds **first**)
 
 ```go
-// Every minute at :00 and :30 (seconds field is last)
+// Every minute at :00 and :30 (seconds field is first)
 c, err := cronx.New("0,30 */1 * * * *", cronx.WithSeconds())
 if err != nil { panic(err) }
 defer c.Stop()
@@ -73,7 +73,7 @@ defer c.Stop()
 
 ## 🧭 Seconds & Field Order (option‑driven)
 
-This package uses a **single canonical 6‑field layout with seconds as the last field**:
+This package uses a **single canonical 6‑field layout with seconds as the first field**:
 
     sec min hour dom mon dow
 
@@ -178,7 +178,7 @@ func WithSeconds() Option // enable second-level scheduling & 6th field
 A: Keeping the runtime state immutable avoids cross‑goroutine synchronization complexity and potential leaks. Creating a new cron is cheap and clear.
 
 **Q: Where are seconds in the spec? First or last?**  
-A: **Last**. We chose `sec min hour dom mon dow` to make extending classic 5‑field cron intuitive. Seconds are **enabled explicitly** via `WithSeconds()`.
+A: **First**. We chose `sec min hour dom mon dow` to make extending classic 5‑field cron intuitive. Seconds are **enabled explicitly** via `WithSeconds()`.
 
 **Q: Can I preview upcoming runs without starting a goroutine?**  
 A: Yes—use `ParseSpec` + `Schedule.NextFrom` (via `Cron.Next`) to enumerate future instants.

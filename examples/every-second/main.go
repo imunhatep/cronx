@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	// Every 2 minutes
+	// Every 1 second
 	c1, err := cronx.New("*/1 * * * * *",
 		cronx.WithLocation(time.Local),
 		cronx.WithSeconds(),
