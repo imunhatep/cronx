@@ -32,7 +32,7 @@ func WithStartFrom(from time.Time) Option {
 // WithSeconds enables 6-field cron and second-level resolution.
 // Parsing is option-driven:
 //   - Without WithSeconds(): the spec must have 5 fields; sec=0.
-//   - With WithSeconds(): the spec may have 5 fields (sec="*") or 6 fields (leading "sec").
+//   - With WithSeconds(): the spec may have 5 fields (sec="0") or 6 fields (leading "sec").
 func WithSeconds() Option {
 	return func(c *Cron) { c.withSeconds = true }
 }

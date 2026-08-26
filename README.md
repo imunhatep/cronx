@@ -85,7 +85,7 @@ Behavior depends on the `WithSeconds()` option:
 
 *   **With `WithSeconds()`**  
     Accept **5 or 6 fields**:
-    *   **5 fields** → seconds default to `"*"` (every second).
+    *   **5 fields** → seconds default to `"0"`, i.e. the same instants as minute-level.
     *   **6 fields** → the **first field is seconds** (`sec min hour dom mon dow`).
 
 Examples:

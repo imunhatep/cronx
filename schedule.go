@@ -15,7 +15,7 @@ import (
 // Schedule is a parsed cron mask supporting 5- or 6-field syntax depending on config.
 // If WithSeconds() is enabled:
 //   - 6 fields: "sec min hour dom mon dow"
-//   - 5 fields: "min hour dom mon dow"  (seconds default to "*")
+//   - 5 fields: "min hour dom mon dow"  (seconds default to "0")
 //
 // If WithSeconds() is disabled:
 //   - exactly 5 fields: "min hour dom mon dow" (seconds fixed to 0)
@@ -52,7 +52,7 @@ func mustMask(min, max int) uint64 {
 //   - withSeconds=false: expect exactly 5 fields (sec fixed to 0)
 //   - withSeconds=true:
 //   - 6 fields: "sec min hour dom mon dow"
-//   - 5 fields: "min hour dom mon dow" (seconds default to "*")
+//   - 5 fields: "min hour dom mon dow" (seconds default to "0")
 
 func ParseSpec(spec string, withSeconds bool) (Schedule, error) {
 	fields := strings.Fields(spec)
@@ -61,14 +61,14 @@ func ParseSpec(spec string, withSeconds bool) (Schedule, error) {
 		return Schedule{}, fmt.Errorf("expected 5 fields without seconds, got %d", len(fields))
 	}
 
-	// transform 5-field to 6-field by appending "*" for seconds
+	// transform 5-field to 6-field by prepending "0" for seconds
 	if withSeconds && len(fields) == 5 {
-		fields = append(fields, "*")
+		fields = append([]string{"0"}, fields...)
 	}
 
-	// transform 5-field to 6-field by prepending "*" for seconds
+	// transform 5-field to 6-field by prepending "0" for seconds
 	if !withSeconds && len(fields) == 5 {
-		fields = append([]string{"*"}, fields...)
+		fields = append([]string{"0"}, fields...)
 	}
 
 	if len(fields) != 6 {

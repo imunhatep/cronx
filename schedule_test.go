@@ -107,3 +107,38 @@ func TestSchedule_Matches(t *testing.T) {
 		t.Errorf("unexpected match for %v", noMatchTime)
 	}
 }
+
+// A 5-field spec must parse to the same masks whether or not seconds are
+// enabled: the seconds default is prepended, so no field may shift position.
+func TestParser_Parse_FiveFieldsNoFieldShift(t *testing.T) {
+	const spec = "30 8 * * 1" // 08:30 on Mondays
+
+	base, err := ParseSpec(spec, false)
+	if err != nil {
+		t.Fatalf("withSeconds=false: unexpected error: %v", err)
+	}
+	withSec, err := ParseSpec(spec, true)
+	if err != nil {
+		t.Fatalf("withSeconds=true: unexpected error: %v", err)
+	}
+	if withSec != base {
+		t.Errorf("5-field spec %q parsed differently with seconds enabled:\n without: %+v\n with:    %+v", spec, base, withSec)
+	}
+	if base.Second != 1<<0 {
+		t.Errorf("expected seconds to default to bit 0, got %#x", base.Second)
+	}
+	if base.Minute != 1<<30 {
+		t.Errorf("expected minute 30, got %#x", base.Minute)
+	}
+	if base.Hour != 1<<8 {
+		t.Errorf("expected hour 8, got %#x", base.Hour)
+	}
+	if base.Dow != 1<<1 {
+		t.Errorf("expected dow Monday, got %#x", base.Dow)
+	}
+
+	// Named day-of-week must stay in the dow field rather than shifting into month.
+	if _, err := ParseSpec("0 9-17/2 * * mon-fri", true); err != nil {
+		t.Errorf("named dow in 5-field spec with seconds enabled: %v", err)
+	}
+}
