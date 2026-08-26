@@ -72,6 +72,12 @@ func NewSchedule(s Schedule, opts ...Option) (*Cron, error) {
 func (c *Cron) run() {
 	now := c.from.In(c.loc)
 	next := c.sched.NextFrom(now, c.withSeconds)
+	// a schedule matching no real date never fires; stop rather than spin on an
+	// already-elapsed timer
+	if next.IsZero() {
+		return
+	}
+
 	timer := time.NewTimer(time.Until(next))
 	defer func() {
 		stopTimer(timer)
@@ -84,6 +90,10 @@ func (c *Cron) run() {
 			c.c <- next
 			now = next
 			next = c.sched.NextFrom(now, c.withSeconds)
+			if next.IsZero() {
+				return
+			}
+
 			stopTimer(timer)
 			timer = time.NewTimer(time.Until(next))
 		case <-c.stop:
@@ -118,6 +128,7 @@ func (c *Cron) Stop() bool {
 }
 
 // Next returns the next matching instant from 'from' using this Cron's resolution.
+// It returns the zero Time if the schedule can never fire.
 func (c *Cron) Next(from time.Time) time.Time {
 	return c.sched.NextFrom(from.In(c.loc), c.withSeconds)
 }

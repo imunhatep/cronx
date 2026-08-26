@@ -244,9 +244,22 @@ func (s Schedule) dayMatches(t time.Time) bool {
 	return true
 }
 
+// maxLookaheadYears bounds the search performed by NextFrom. A schedule such as
+// "0 0 30 2 *" matches no real date, and unbounded the search would never return.
+const maxLookaheadYears = 5
+
 // NextFrom returns the next matching instant strictly after t.
 // If withSeconds=false: minute resolution, fires at second==0.
 // If withSeconds=true: second resolution.
+//
+// It returns the zero Time when the schedule matches nothing within
+// maxLookaheadYears, meaning it can never fire.
+//
+// A field that does not match advances ts to the first instant of its next candidate
+// and re-runs the whole loop. Landing on the start of a coarser unit is already
+// strictly after t, so the finer fields have to keep their lowest value: nudging ts on
+// by an extra minute or second there would step over a legitimate match at :00 and put
+// every "0 H * * *" schedule an hour late.
 func (s Schedule) NextFrom(t time.Time, withSeconds bool) time.Time {
 	loc := t.Location()
 	var ts time.Time
@@ -256,7 +269,9 @@ func (s Schedule) NextFrom(t time.Time, withSeconds bool) time.Time {
 		ts = t.In(loc).Truncate(time.Minute).Add(time.Minute)
 	}
 
-	for {
+	limit := ts.AddDate(maxLookaheadYears, 0, 0)
+
+	for ts.Before(limit) {
 		y, m, d := ts.Date()
 		mon := int(m)
 
@@ -266,24 +281,13 @@ func (s Schedule) NextFrom(t time.Time, withSeconds bool) time.Time {
 			if wrap {
 				y++
 			}
-			mon = nextMon
-			ts = time.Date(y, time.Month(mon), 1, 0, 0, 0, 0, loc)
-			if withSeconds {
-				ts = ts.Add(time.Second)
-			} else {
-				ts = ts.Add(time.Minute)
-			}
+			ts = time.Date(y, time.Month(nextMon), 1, 0, 0, 0, 0, loc)
 			continue
 		}
 
 		// Day
 		if !s.dayMatches(ts) {
 			ts = time.Date(y, m, d, 0, 0, 0, 0, loc).AddDate(0, 0, 1)
-			if withSeconds {
-				ts = ts.Add(time.Second)
-			} else {
-				ts = ts.Add(time.Minute)
-			}
 			continue
 		}
 
@@ -296,11 +300,6 @@ func (s Schedule) NextFrom(t time.Time, withSeconds bool) time.Time {
 			} else {
 				ts = time.Date(y, m, d, nextH, 0, 0, 0, loc)
 			}
-			if withSeconds {
-				ts = ts.Add(time.Second)
-			} else {
-				ts = ts.Add(time.Minute)
-			}
 			continue
 		}
 
@@ -309,36 +308,36 @@ func (s Schedule) NextFrom(t time.Time, withSeconds bool) time.Time {
 		if ((s.Minute >> uint(fieldMin)) & 1) == 0 {
 			nextM, wrapM := nextAllowed(s.Minute, fieldMin, 0, 59)
 			if wrapM {
+				// carrying into the next hour invalidates the hour, day and month
+				// checks above, so re-run them instead of returning here
 				ts = time.Date(y, m, d, h, 0, 0, 0, loc).Add(time.Hour)
 			} else {
 				ts = time.Date(y, m, d, h, nextM, 0, 0, loc)
 			}
-			if withSeconds {
-				ts = ts.Add(time.Second)
+			continue
+		}
+
+		// All matched at minute resolution
+		if !withSeconds {
+			return time.Date(y, m, d, h, fieldMin, 0, 0, loc)
+		}
+
+		// Second (only when enabled)
+		sec := ts.Second()
+		if ((s.Second >> uint(sec)) & 1) == 0 {
+			nextS, wrapS := nextAllowed(s.Second, sec, 0, 59)
+			if wrapS {
+				ts = time.Date(y, m, d, h, fieldMin, 0, 0, loc).Add(time.Minute)
 			} else {
-				// second=0 at minute resolution
-				return ts
+				ts = time.Date(y, m, d, h, fieldMin, nextS, 0, loc)
 			}
 			continue
 		}
 
-		// Second (only when enabled)
-		if withSeconds {
-			sec := ts.Second()
-			if ((s.Second >> uint(sec)) & 1) == 0 {
-				nextS, wrapS := nextAllowed(s.Second, sec, 0, 59)
-				if wrapS {
-					ts = time.Date(y, m, d, h, fieldMin, 0, 0, loc).Add(time.Minute)
-					continue
-				}
-				return time.Date(y, m, d, h, fieldMin, nextS, 0, loc)
-			}
-			return ts
-		}
-
-		// All matched at minute resolution
-		return time.Date(y, m, d, h, fieldMin, 0, 0, loc)
+		return time.Date(y, m, d, h, fieldMin, sec, 0, loc)
 	}
+
+	return time.Time{}
 }
 
 func nextAllowed(mask uint64, cur, min, max int) (val int, wrap bool) {
